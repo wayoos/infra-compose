@@ -3,17 +3,20 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/urfave/cli"
 	"gopkg.in/yaml.v2"
 )
 
+// Service ...
 type Service struct {
 	Path     string
 	Commands map[string]string
 }
 
+// Datacenter ...
 type Datacenter struct {
 	Environment []string
 	Services    map[string]Service
@@ -70,6 +73,58 @@ func read() {
 
 }
 
+func findCompose(c *cli.Context) (Config, error) {
+
+	if c.GlobalIsSet("project-directory") {
+		projectDir := c.GlobalString("project-directory")
+		err := os.Chdir(projectDir)
+		if err != nil {
+			var config Config
+			return config, cli.NewExitError(err, 1)
+		}
+	}
+
+	filename := c.GlobalString("file")
+
+	_, err := os.Stat(filename)
+	if err != nil {
+		var config Config
+		return config, cli.NewExitError("Compose file not found", 1)
+	}
+
+	return loadCompose(filename)
+}
+
+func loadCompose(filename string) (Config, error) {
+	var config Config
+
+	source, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+		return config, cli.NewExitError(err, 1)
+	}
+	err = yaml.Unmarshal(source, &config)
+	if err != nil {
+		return config, cli.NewExitError(err, 1)
+	}
+
+	return config, nil
+}
+
+func execCommand(c *cli.Context) error {
+
+	_, err := findCompose(c)
+	if err != nil {
+		return err
+	}
+
+	if !c.Args().Present() {
+		return cli.NewExitError("\"infra-compose exec\" requires at least one argument.", 1)
+	}
+
+	return nil
+}
+
 func main() {
 
 	app := cli.NewApp()
@@ -80,6 +135,7 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "file, f", Usage: "Specify an alternate compose file", Value: "infra-compose.yml"},
+		cli.StringFlag{Name: "project-directory, p", Usage: "Specify an alternate working directory (default: the path of the Compose file)"},
 	}
 
 	app.Commands = []cli.Command{
@@ -113,14 +169,7 @@ func main() {
 			Aliases:   []string{"e"},
 			Usage:     "Run a global command or in a service",
 			UsageText: "Run a global command or in a service",
-			Action: func(c *cli.Context) error {
-
-				fmt.Printf("Hello %q", c.Args().Get(0))
-				fmt.Fprintf(c.App.Writer, "COMMANDS\n")
-				fmt.Fprintf(c.App.Writer, "up\n")
-				fmt.Fprintf(c.App.Writer, "down\n")
-				return nil
-			},
+			Action:    execCommand,
 		},
 	}
 
