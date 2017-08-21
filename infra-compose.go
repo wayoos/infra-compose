@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/urfave/cli"
 	"gopkg.in/yaml.v2"
@@ -25,6 +27,7 @@ type Datacenter struct {
 // Config ... is a blabla
 type Config struct {
 	Version     string
+	projectDir  string
 	Datacenters map[string]Datacenter `yaml:"datacenters"`
 }
 
@@ -108,18 +111,64 @@ func loadCompose(filename string) (Config, error) {
 		return config, cli.NewExitError(err, 1)
 	}
 
+	absFileName, _ := filepath.Abs(filename)
+	config.projectDir = filepath.Dir(absFileName)
+
 	return config, nil
 }
 
 func execCommand(c *cli.Context) error {
 
-	_, err := findCompose(c)
+	config, err := findCompose(c)
 	if err != nil {
 		return err
 	}
 
 	if !c.Args().Present() {
 		return cli.NewExitError("\"infra-compose exec\" requires at least one argument.", 1)
+	}
+
+	command := c.Args().First()
+
+	// check if global command
+
+	// else find datacenter service
+	datacenter, present := config.Datacenters[command]
+	if present {
+		if c.NArg() >= 2 {
+
+			var serviceArgs cli.Args
+			serviceArgs = c.Args().Tail()
+
+			service, present := datacenter.Services[serviceArgs.First()]
+			if present {
+				servicePath := filepath.Join(config.projectDir, service.Path)
+				os.Chdir(servicePath)
+
+				var commandArgs cli.Args
+				commandArgs = serviceArgs.Tail()
+				cmd := exec.Command(commandArgs.First())
+				cmd.Args = commandArgs
+				cmd.Dir = servicePath
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				cmd.Stdin = os.Stdin
+
+				err := cmd.Run()
+				if err != nil {
+					fmt.Printf("Failed to start. %s\n", err.Error())
+
+					return cli.NewExitError("execute command error", 1)
+				}
+
+			} else {
+				return cli.NewExitError("Invalid service", 1)
+			}
+		} else {
+			return cli.NewExitError("Service name required", 1)
+		}
+	} else {
+		return cli.NewExitError("Invalid datacenter", 1)
 	}
 
 	return nil
