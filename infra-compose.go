@@ -12,10 +12,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Command []string
+
+type Commands map[string]Command
+
 // Service ...
 type Service struct {
 	Path     string
-	Commands map[string]string
+	Commands Commands
 }
 
 // Datacenter ...
@@ -29,51 +33,55 @@ type Config struct {
 	Version     string
 	projectDir  string
 	Datacenters map[string]Datacenter `yaml:"datacenters"`
+	Commands    Commands
 }
 
-func read() {
-	fmt.Printf("Hello, world.\n")
+func (c *Config) exec(cmd cli.Args) error {
+	fmt.Printf("Execute command: %s\n", cmd)
 
-	var config Config
+	// check if global command
 
-	filename := "infra-compose.yml"
-	source, err := ioutil.ReadFile(filename)
-	if err != nil {
-		panic(err)
+	// else find datacenter service
+	datacenter, present := c.Datacenters[cmd.First()]
+	if present {
+		if len(cmd) >= 2 {
+
+			var serviceArgs cli.Args
+			serviceArgs = cmd.Tail()
+
+			service, present := datacenter.Services[serviceArgs.First()]
+			if present {
+				servicePath := filepath.Join(c.projectDir, service.Path)
+				os.Chdir(servicePath)
+
+				var commandArgs cli.Args
+				commandArgs = serviceArgs.Tail()
+				cmd := exec.Command(commandArgs.First())
+				cmd.Args = commandArgs
+				cmd.Dir = servicePath
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				cmd.Stdin = os.Stdin
+
+				env := append(os.Environ(), datacenter.Environment...)
+				cmd.Env = env
+
+				err := cmd.Run()
+				if err != nil {
+					return cli.NewExitError("Execute command error: "+err.Error(), 1)
+				}
+
+			} else {
+				return cli.NewExitError("Invalid service", 1)
+			}
+		} else {
+			return cli.NewExitError("Service name required", 1)
+		}
+	} else {
+		return cli.NewExitError("Invalid datacenter", 1)
 	}
-	err = yaml.Unmarshal(source, &config)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Value: %#v\n", config)
 
-	m := yaml.MapSlice{}
-	err = yaml.Unmarshal(source, &m)
-	if err != nil {
-		panic(err)
-	}
-
-	//	fmt.Printf("Value: %#v\n", m)
-
-	var serviceBastion Service
-	serviceBastion.Path = "mgmt/services/bastion"
-
-	var c Config
-	c.Version = "34"
-
-	var dsgra Datacenter
-
-	dsgra.Services = make(map[string]Service)
-	dsgra.Services["bastion"] = serviceBastion
-
-	c.Datacenters = make(map[string]Datacenter)
-	c.Datacenters["gra"] = dsgra
-
-	out, err := yaml.Marshal(c)
-
-	//	fmt.Printf("Value: %#v\n", out)
-	ioutil.WriteFile("test.yml", out, 0644)
-
+	return nil
 }
 
 func findCompose(c *cli.Context) (Config, error) {
@@ -117,7 +125,7 @@ func loadCompose(filename string) (Config, error) {
 	return config, nil
 }
 
-func execCommand(c *cli.Context) error {
+func execCliCommand(c *cli.Context) error {
 
 	config, err := findCompose(c)
 	if err != nil {
@@ -128,50 +136,7 @@ func execCommand(c *cli.Context) error {
 		return cli.NewExitError("\"infra-compose exec\" requires at least one argument.", 1)
 	}
 
-	command := c.Args().First()
-
-	// check if global command
-
-	// else find datacenter service
-	datacenter, present := config.Datacenters[command]
-	if present {
-		if c.NArg() >= 2 {
-
-			var serviceArgs cli.Args
-			serviceArgs = c.Args().Tail()
-
-			service, present := datacenter.Services[serviceArgs.First()]
-			if present {
-				servicePath := filepath.Join(config.projectDir, service.Path)
-				os.Chdir(servicePath)
-
-				var commandArgs cli.Args
-				commandArgs = serviceArgs.Tail()
-				cmd := exec.Command(commandArgs.First())
-				cmd.Args = commandArgs
-				cmd.Dir = servicePath
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				cmd.Stdin = os.Stdin
-
-				err := cmd.Run()
-				if err != nil {
-					fmt.Printf("Failed to start. %s\n", err.Error())
-
-					return cli.NewExitError("execute command error", 1)
-				}
-
-			} else {
-				return cli.NewExitError("Invalid service", 1)
-			}
-		} else {
-			return cli.NewExitError("Service name required", 1)
-		}
-	} else {
-		return cli.NewExitError("Invalid datacenter", 1)
-	}
-
-	return nil
+	return config.exec(c.Args())
 }
 
 func main() {
@@ -218,7 +183,7 @@ func main() {
 			Aliases:   []string{"e"},
 			Usage:     "Run a global command or in a service",
 			UsageText: "Run a global command or in a service",
-			Action:    execCommand,
+			Action:    execCliCommand,
 		},
 	}
 
