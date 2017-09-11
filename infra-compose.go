@@ -139,7 +139,7 @@ func execCliCommand(c *cli.Context) error {
 	return config.exec(c.Args())
 }
 
-func main() {
+func main2() {
 
 	app := cli.NewApp()
 	app.Name = "infra-compose"
