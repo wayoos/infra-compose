@@ -16,6 +16,11 @@ package main
 
 import "github.com/wayoos/infra-compose/cmd"
 
+var (
+	// VERSION ... used by build script
+	VERSION = "0.1"
+)
+
 func main() {
-	cmd.Execute()
+	cmd.Execute(VERSION)
 }

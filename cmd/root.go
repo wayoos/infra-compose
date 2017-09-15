@@ -30,6 +30,7 @@ var RootCmd = &cobra.Command{
 	Use:   "infra-compose",
 	Short: "Define and run multi-infrastructure tools.",
 	Long:  `Define and run multi-infrastructure tools.`,
+
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -37,13 +38,22 @@ var RootCmd = &cobra.Command{
 	//	DisableFlagParsing: true,
 }
 
+var (
+	// VERSION is set during build
+	VERSION string
+)
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(version string) {
+	VERSION = version
+
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	fmt.Println(cfgFile)
 }
 
 func init() {

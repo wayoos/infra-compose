@@ -16,52 +16,30 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-// execCmd represents the exec command
-var execCmd = &cobra.Command{
-	Use:   "exec",
-	Short: "Run a global or service command.",
-	Long:  `Run a global or service command.`,
-	Args:  cobra.MinimumNArgs(1),
+// versionCmd represents the version command
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Show the Infra-Compose version information",
+	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		if args[0] == "--help" || args[0] == "-h" {
-			cmd.HelpFunc()(cmd, args)
-		} else {
-			fmt.Println("exec args: " + strings.Join(args, " "))
-
-			//			cmd.FlagErrorFunc
-
-			validArgs := args[:len(args)-1]
-
-			fmt.Println("exec args: " + strings.Join(validArgs, " "))
-
-			err := cmd.ValidateArgs(args)
-			//err := cmd.Flags().Parse(validArgs)
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Println("cmd args: " + strings.Join(cmd.Flags().Args(), " "))
-
-		}
+		fmt.Println(RootCmd.Use + " v" + VERSION)
 	},
-	DisableFlagParsing: true,
-	SilenceErrors:      true,
 }
 
 func init() {
-	RootCmd.AddCommand(execCmd)
+	RootCmd.AddCommand(versionCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// execCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// versionCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// execCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// versionCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
