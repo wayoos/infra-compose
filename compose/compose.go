@@ -2,8 +2,11 @@ package compose
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -26,14 +29,15 @@ type Datacenter struct {
 
 // Compose ... composed infrastructure
 type Compose struct {
-	Version string
-	//	projectDir  string
+	Version     string
+	projectDir  string
 	Datacenters map[string]Datacenter `yaml:"datacenters"`
 	Commands    Commands
 }
 
 // Exec ...
 func (c *Compose) Exec(args []string) error {
+	fmt.Println("Exec args:" + strings.Join(args, " "))
 	return nil
 }
 
@@ -57,6 +61,9 @@ func (c *Compose) loadCompose(composeFile string) error {
 	if err != nil {
 		return err
 	}
+
+	absFileName, _ := filepath.Abs(composeFile)
+	c.projectDir = filepath.Dir(absFileName)
 
 	return nil
 }

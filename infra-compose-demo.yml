@@ -1,0 +1,33 @@
+version: '1'
+datacenters:
+  europe:
+    environment:
+      - OS_REGION_NAME=EUR
+    services:
+      global:
+        path: global
+        commands:
+          up: [terraform apply]
+          down: [terraform destroy]        
+      bastion:
+        path: mgmt/services/bastion
+        commands:
+          up: [terraform apply]
+          down: [terraform destroy]
+          ssh: [infra ssh]
+  USEast:
+    environment:
+      - OS_REGION_NAME=US-EAST
+    services:
+      global:
+        path: global
+        commands:
+          up: [terraform apply]
+          down: [terraform destroy]        
+
+commands:
+  up:
+    - europe global up
+    - USEast global up
+    - europe bastion up
+  down: [gra bastion down]

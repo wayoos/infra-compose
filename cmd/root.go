@@ -63,6 +63,8 @@ func init() {
 
 	RootCmd.PersistentFlags().StringVarP(&composeFile, "file", "f", "infra-compose.yml", "Specify an alternate compose file")
 
+	RootCmd.PersistentFlags().StringVarP(&projectDir, "project-directory", "p", "", "Specify an alternate compose file")
+
 	//	cli.StringFlag{Name: "file, f", Usage: "Specify an alternate compose file", Value: "infra-compose.yml"},
 	//	cli.StringFlag{Name: "project-directory, p", Usage: "Specify an alternate working directory (default: the path of the Compose file)"},
 

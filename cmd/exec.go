@@ -15,9 +15,6 @@
 package cmd
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/spf13/cobra"
 	"github.com/wayoos/infra-compose/compose"
 )
@@ -29,23 +26,15 @@ var execCmd = &cobra.Command{
 	Long:  `Run a global or service command.`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("exec args: " + strings.Join(args, " "))
-
 		err := cmd.Flags().Parse(args)
-		if err != nil {
-			fmt.Println(err)
-		}
+		//		if err != nil {
+		//			fmt.Println(err)
+		//		}
 
 		if args[0] == "--help" || args[0] == "-h" {
 			cmd.HelpFunc()(cmd, args)
 			return nil
 		}
-
-		//			cmd.
-		fmt.Println("compose file: " + composeFile)
-		fmt.Println("compose file: " + projectDir)
-
-		fmt.Println("cmd args: " + strings.Join(cmd.Flags().Args(), " "))
 
 		compose := compose.Compose{}
 		err = compose.Load(composeFile, projectDir)
@@ -53,7 +42,14 @@ var execCmd = &cobra.Command{
 			return err
 		}
 
-		return compose.Exec(args)
+		// remove global flags
+		firstCmdArg := cmd.Flags().Arg(0)
+		validArgs := args
+		for firstCmdArg != validArgs[0] {
+			validArgs = validArgs[1:]
+		}
+
+		return compose.Exec(validArgs)
 	},
 	DisableFlagParsing: true,
 	SilenceUsage:       true,
