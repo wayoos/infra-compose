@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/wayoos/infra-compose/compose"
 )
 
 // execCmd represents the exec command
@@ -27,28 +28,35 @@ var execCmd = &cobra.Command{
 	Short: "Run a global or service command.",
 	Long:  `Run a global or service command.`,
 	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("exec args: " + strings.Join(args, " "))
+
+		err := cmd.Flags().Parse(args)
+		if err != nil {
+			fmt.Println(err)
+		}
+
 		if args[0] == "--help" || args[0] == "-h" {
 			cmd.HelpFunc()(cmd, args)
-		} else {
-			fmt.Println("exec args: " + strings.Join(args, " "))
-
-			//			cmd.FlagErrorFunc
-
-			validArgs := args[:len(args)-1]
-
-			fmt.Println("exec args: " + strings.Join(validArgs, " "))
-
-			err := cmd.ValidateArgs(args)
-			//err := cmd.Flags().Parse(validArgs)
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Println("cmd args: " + strings.Join(cmd.Flags().Args(), " "))
-
+			return nil
 		}
+
+		//			cmd.
+		fmt.Println("compose file: " + composeFile)
+		fmt.Println("compose file: " + projectDir)
+
+		fmt.Println("cmd args: " + strings.Join(cmd.Flags().Args(), " "))
+
+		compose := compose.Compose{}
+		err = compose.Load(composeFile, projectDir)
+		if err != nil {
+			return err
+		}
+
+		return compose.Exec(args)
 	},
 	DisableFlagParsing: true,
+	SilenceUsage:       true,
 	SilenceErrors:      true,
 }
 
