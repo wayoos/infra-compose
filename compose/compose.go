@@ -2,12 +2,12 @@ package compose
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
 
+	"github.com/urfave/cli"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -37,7 +37,44 @@ type Compose struct {
 
 // Exec ...
 func (c *Compose) Exec(args []string) error {
-	fmt.Println("Exec args:" + strings.Join(args, " "))
+	//fmt.Println("Exec args:" + strings.Join(args, " "))
+
+	// check if global command
+
+	// else find datacenter service
+	datacenterName := args[0]
+
+	datacenter, present := c.Datacenters[datacenterName]
+	if !present {
+		return errors.New("Invalid datacenter name")
+	}
+
+	serviceName := args[1]
+	service, present := datacenter.Services[serviceName]
+	if !present {
+		return errors.New("Invalid service name")
+	}
+
+	servicePath := filepath.Join(c.projectDir, service.Path)
+	os.Chdir(servicePath)
+
+	var commandArgs cli.Args
+	commandArgs = args[2:]
+	cmd := exec.Command(commandArgs.First())
+	cmd.Args = commandArgs
+	cmd.Dir = servicePath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	env := append(os.Environ(), datacenter.Environment...)
+	cmd.Env = env
+
+	err := cmd.Run()
+	if err != nil {
+		return cli.NewExitError("Execute command error: "+err.Error(), 1)
+	}
+
 	return nil
 }
 
