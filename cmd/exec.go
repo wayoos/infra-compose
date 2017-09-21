@@ -26,10 +26,8 @@ var execCmd = &cobra.Command{
 	Long:  `Run a global or service command.`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cmd.Flags().Parse(args)
-		//		if err != nil {
-		//			fmt.Println(err)
-		//		}
+		// Parse flag and ignore invalid flag used in sub command
+		cmd.Flags().Parse(args)
 
 		if args[0] == "--help" || args[0] == "-h" {
 			cmd.HelpFunc()(cmd, args)
@@ -37,7 +35,7 @@ var execCmd = &cobra.Command{
 		}
 
 		compose := compose.Compose{}
-		err = compose.Load(composeFile, projectDir)
+		err := compose.Load(composeFile, projectDir)
 		if err != nil {
 			return err
 		}
