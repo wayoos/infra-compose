@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
-	"github.com/urfave/cli"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -35,6 +35,12 @@ type Compose struct {
 	Commands    Commands
 }
 
+type execResult struct {
+	datacenterID string
+	serviceID    string
+	command      Command
+}
+
 // Exec ...
 func (c *Compose) Exec(args []string) error {
 	//fmt.Println("Exec args:" + strings.Join(args, " "))
@@ -56,23 +62,41 @@ func (c *Compose) Exec(args []string) error {
 	}
 
 	servicePath := filepath.Join(c.projectDir, service.Path)
-	os.Chdir(servicePath)
+	err := os.Chdir(servicePath)
+	if err != nil {
+		return err
+	}
 
-	var commandArgs cli.Args
-	commandArgs = args[2:]
-	cmd := exec.Command(commandArgs.First())
-	cmd.Args = commandArgs
-	cmd.Dir = servicePath
+	command := args[2]
+	commandArgs := args[3:]
+
+	// search if a command is defined
+	commandList, present := service.Commands[command]
+	if present {
+		commands := commandList[0]
+
+		commandsSplit := strings.Fields(commands)
+		return executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, datacenter.Environment)
+	}
+
+	// Execute command in service directory
+	return executeCommand(command, commandArgs, servicePath, datacenter.Environment)
+}
+
+func executeCommand(name string, args []string, dir string, env []string) error {
+	cmd := exec.Command(name, args...)
+	//	cmd.Args = args
+	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
-	env := append(os.Environ(), datacenter.Environment...)
-	cmd.Env = env
+	fullEnv := append(os.Environ(), env...)
+	cmd.Env = fullEnv
 
 	err := cmd.Run()
 	if err != nil {
-		return cli.NewExitError("Execute command error: "+err.Error(), 1)
+		return errors.New("Execute command error. " + err.Error())
 	}
 
 	return nil
@@ -115,7 +139,16 @@ func findComposeFile(file string, projectDir string) (string, error) {
 
 	_, err := os.Stat(file)
 	if err != nil {
-		return "", errors.New("Compose file not found")
+
+		// if not root path find in parent
+		absProjectDir, _ := filepath.Abs(projectDir)
+		parentDir := filepath.Dir(absProjectDir)
+
+		if absProjectDir == "/" {
+			return "", errors.New("Compose file not found")
+		}
+
+		return findComposeFile(file, parentDir)
 	}
 
 	return file, nil
