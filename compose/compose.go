@@ -2,6 +2,7 @@ package compose
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -43,7 +44,28 @@ type execResult struct {
 
 // Exec ...
 func (c *Compose) Exec(args []string) error {
-	//fmt.Println("Exec args:" + strings.Join(args, " "))
+
+	serviceCmdAlias := args[0]
+
+	cmds, present := c.Commands[serviceCmdAlias]
+	var err error
+	if present {
+		for _, cmd := range cmds {
+			err = c.execServiceCmd(cmd)
+		}
+	} else {
+		err = c.execServiceCmds(args)
+	}
+	return err
+}
+
+func (c *Compose) execServiceCmd(args string) error {
+	return c.execServiceCmds(strings.Fields(args))
+}
+
+func (c *Compose) execServiceCmds(args []string) error {
+
+	fmt.Println("Exec args:" + strings.Join(args, " "))
 
 	// check if global command
 
