@@ -19,6 +19,8 @@ import (
 	"github.com/wayoos/infra-compose/compose"
 )
 
+var dryRun bool
+
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
 	Use:   "exec",
@@ -35,6 +37,7 @@ var execCmd = &cobra.Command{
 		}
 
 		compose := compose.Compose{}
+		compose.DryRun = dryRun
 		err := compose.Load(composeFile, projectDir)
 		if err != nil {
 			return err
@@ -65,5 +68,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// execCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	execCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "If true, only print command that would be executed, without executing it.")
 }

@@ -7,7 +7,7 @@ datacenters:
       global:
         path: global
         commands:
-          up: [terraform apply]
+          up: ['terraform apply', 'terraform version']
           down: [terraform destroy]        
       bastion:
         path: mgmt/services/bastion

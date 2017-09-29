@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -32,6 +33,7 @@ type Datacenter struct {
 type Compose struct {
 	Version     string
 	projectDir  string
+	DryRun      bool
 	Datacenters map[string]Datacenter `yaml:"datacenters"`
 	Commands    Commands
 }
@@ -40,53 +42,73 @@ type execResult struct {
 	datacenterID string
 	serviceID    string
 	command      Command
+	execError    error
 }
 
 // Exec ...
 func (c *Compose) Exec(args []string) error {
-
+	var execResults []execResult
 	serviceCmdAlias := args[0]
 
 	cmds, present := c.Commands[serviceCmdAlias]
 	var err error
 	if present {
 		for _, cmd := range cmds {
-			err = c.execServiceCmd(cmd)
+			res := c.execServiceCmd(cmd)
+			if res.execError != nil {
+				err = res.execError
+				break
+			}
 		}
 	} else {
-		err = c.execServiceCmds(args)
+		err = c.execServiceCmds(args).execError
 	}
+
+	dumpExecResults(execResults)
+
 	return err
 }
 
-func (c *Compose) execServiceCmd(args string) error {
+func dumpExecResults(execResults []execResult) {
+	fmt.Println("Execution summary")
+	const padding = 5
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
+	fmt.Fprintln(w, "Datacenter\tService\tCommand\tExec\tStatus\t")
+	fmt.Fprintln(w, "europe\tglobal\tup\tterraform apply\tSuccess\t")
+	fmt.Fprintln(w, "europe\tglobal\tup\tterraform version\tSuccess\t")
+	fmt.Fprintln(w, "europe\tbastion\tup\tterraform version\tError\t")
+	w.Flush()
+}
+
+func (c *Compose) execServiceCmd(args string) execResult {
 	return c.execServiceCmds(strings.Fields(args))
 }
 
-func (c *Compose) execServiceCmds(args []string) error {
-
-	fmt.Println("Exec args:" + strings.Join(args, " "))
-
-	// check if global command
+func (c *Compose) execServiceCmds(args []string) execResult {
+	result := execResult{}
+	//	fmt.Println("Exec args:" + strings.Join(args, " "))
 
 	// else find datacenter service
 	datacenterName := args[0]
 
 	datacenter, present := c.Datacenters[datacenterName]
 	if !present {
-		return errors.New("Invalid datacenter name")
+		result.execError = errors.New("Invalid datacenter name")
+		return result
 	}
 
 	serviceName := args[1]
 	service, present := datacenter.Services[serviceName]
 	if !present {
-		return errors.New("Invalid service name")
+		result.execError = errors.New("Invalid service name")
+		return result
 	}
 
 	servicePath := filepath.Join(c.projectDir, service.Path)
 	err := os.Chdir(servicePath)
 	if err != nil {
-		return err
+		result.execError = err
+		return result
 	}
 
 	command := args[2]
@@ -95,19 +117,30 @@ func (c *Compose) execServiceCmds(args []string) error {
 	// search if a command is defined
 	commandList, present := service.Commands[command]
 	if present {
-		commands := commandList[0]
 
-		commandsSplit := strings.Fields(commands)
-		return executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, datacenter.Environment)
+		for _, commands := range commandList {
+			commandsSplit := strings.Fields(commands)
+			c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, datacenter.Environment)
+		}
+		return result
 	}
 
 	// Execute command in service directory
-	return executeCommand(command, commandArgs, servicePath, datacenter.Environment)
+	result.execError = c.executeCommand(command, commandArgs, servicePath, datacenter.Environment)
+	return result
 }
 
-func executeCommand(name string, args []string, dir string, env []string) error {
+func (c *Compose) executeCommand(name string, args []string, dir string, env []string) error {
+	if c.DryRun {
+		fmt.Println("Dry-run: Plan to Execute ")
+		fmt.Println("Exec : " + name + " " + strings.Join(args, " "))
+		fmt.Println("Dir  : " + dir)
+		fmt.Println("Env  : " + strings.Join(env, " "))
+		fmt.Println("")
+		return nil
+	}
+
 	cmd := exec.Command(name, args...)
-	//	cmd.Args = args
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

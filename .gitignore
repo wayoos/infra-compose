@@ -15,3 +15,7 @@
 
 debug
 infra-compose
+.terraform
+*.tfstate
+*.tfstate.backup
+applied-demo.txt
