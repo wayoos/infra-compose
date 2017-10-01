@@ -41,6 +41,7 @@ type Compose struct {
 type execResult struct {
 	datacenterID string
 	serviceID    string
+	commandID    string
 	command      Command
 	execError    error
 }
@@ -55,13 +56,16 @@ func (c *Compose) Exec(args []string) error {
 	if present {
 		for _, cmd := range cmds {
 			res := c.execServiceCmd(cmd)
+			execResults = append(execResults, res)
+			err = res.execError
 			if res.execError != nil {
-				err = res.execError
 				break
 			}
 		}
 	} else {
-		err = c.execServiceCmds(args).execError
+		res := c.execServiceCmds(args)
+		execResults = append(execResults, res)
+		err = res.execError
 	}
 
 	dumpExecResults(execResults)
@@ -71,13 +75,21 @@ func (c *Compose) Exec(args []string) error {
 
 func dumpExecResults(execResults []execResult) {
 	fmt.Println("Execution summary")
-	const padding = 5
+	fmt.Println()
+	const padding = 4
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
-	fmt.Fprintln(w, "Datacenter\tService\tCommand\tExec\tStatus\t")
-	fmt.Fprintln(w, "europe\tglobal\tup\tterraform apply\tSuccess\t")
-	fmt.Fprintln(w, "europe\tglobal\tup\tterraform version\tSuccess\t")
-	fmt.Fprintln(w, "europe\tbastion\tup\tterraform version\tError\t")
+	fmt.Fprintln(w, "Datacenter\tService\tCommand\tStatus\t")
+	fmt.Fprintln(w, "\t\t\t\t\t")
+	for _, res := range execResults {
+		status := "Success"
+		if res.execError != nil {
+			status = "Error"
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t\n", res.datacenterID,
+			res.serviceID, res.commandID, status)
+	}
 	w.Flush()
+	fmt.Println()
 }
 
 func (c *Compose) execServiceCmd(args string) execResult {
@@ -91,6 +103,8 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 	// else find datacenter service
 	datacenterName := args[0]
 
+	result.datacenterID = datacenterName
+
 	datacenter, present := c.Datacenters[datacenterName]
 	if !present {
 		result.execError = errors.New("Invalid datacenter name")
@@ -98,6 +112,7 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 	}
 
 	serviceName := args[1]
+	result.serviceID = serviceName
 	service, present := datacenter.Services[serviceName]
 	if !present {
 		result.execError = errors.New("Invalid service name")
@@ -117,7 +132,7 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 	// search if a command is defined
 	commandList, present := service.Commands[command]
 	if present {
-
+		result.commandID = command
 		for _, commands := range commandList {
 			commandsSplit := strings.Fields(commands)
 			c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, datacenter.Environment)
@@ -126,6 +141,7 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 	}
 
 	// Execute command in service directory
+	result.commandID = "-"
 	result.execError = c.executeCommand(command, commandArgs, servicePath, datacenter.Environment)
 	return result
 }

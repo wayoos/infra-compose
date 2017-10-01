@@ -7,14 +7,16 @@ datacenters:
       global:
         path: global
         commands:
+          init: [terraform init]
           up: ['terraform apply', 'terraform version']
           down: [terraform destroy]        
       bastion:
         path: mgmt/services/bastion
         commands:
+          init: [terraform init]
           up: [terraform apply]
-          down: [terraform destroy]
-          ssh: [infra ssh]
+          down: [terraform destroy -force]
+          ssh: [script-ssh-connect.sh]
   USEast:
     environment:
       - OS_REGION_NAME=US-EAST
@@ -22,12 +24,16 @@ datacenters:
       global:
         path: global
         commands:
+          init: [terraform init]
           up: [terraform apply]
           down: [terraform destroy]        
 
 commands:
+  init:
+    - europe global init
+    - europe bastion init
   up:
     - europe global up
     - USEast global up
     - europe bastion up
-  down: [gra bastion down]
+  down: [europe bastion down]
