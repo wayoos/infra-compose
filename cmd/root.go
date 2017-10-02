@@ -55,7 +55,6 @@ func Execute(version string) {
 		os.Exit(1)
 	}
 
-	fmt.Println(cfgFile)
 }
 
 func init() {

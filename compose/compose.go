@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/tabwriter"
 
@@ -19,23 +20,22 @@ type Commands map[string]Command
 
 // Service ...
 type Service struct {
-	Path     string
-	Commands Commands
+	Path         string
+	Commands     Commands
+	Environments []string
 }
 
-// Datacenter ...
-type Datacenter struct {
-	Environment []string
-	Services    map[string]Service
-}
+type Environment []string
 
 // Compose ... composed infrastructure
 type Compose struct {
-	Version     string
-	projectDir  string
-	DryRun      bool
-	Datacenters map[string]Datacenter `yaml:"datacenters"`
-	Commands    Commands
+	Version      string
+	projectDir   string
+	Services     map[string]Service
+	Commands     Commands
+	Environments map[string]Environment
+
+	DryRun bool
 }
 
 type execResult struct {
@@ -73,6 +73,35 @@ func (c *Compose) Exec(args []string) error {
 	return err
 }
 
+// List ... List all available command
+func (c *Compose) List(args []string) error {
+	fmt.Println("Commands")
+	fmt.Println()
+	const padding = 4
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
+	fmt.Fprintln(w, "Command\tSub-Command\t")
+	//	fmt.Fprintln(w, "\t\t\t")
+
+	//	c.Commands
+
+	var keys []string
+	for k := range c.Commands {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		cmd := c.Commands[k]
+		fmt.Fprintf(w, "%s\t%s\t\n", k,
+			strings.Join(cmd, " "))
+
+	}
+
+	w.Flush()
+	fmt.Println()
+
+	return nil
+}
+
 func dumpExecResults(execResults []execResult) {
 	fmt.Println("Execution summary")
 	fmt.Println()
@@ -105,15 +134,9 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 
 	result.datacenterID = datacenterName
 
-	datacenter, present := c.Datacenters[datacenterName]
-	if !present {
-		result.execError = errors.New("Invalid datacenter name")
-		return result
-	}
-
 	serviceName := args[1]
 	result.serviceID = serviceName
-	service, present := datacenter.Services[serviceName]
+	service, present := c.Services[serviceName]
 	if !present {
 		result.execError = errors.New("Invalid service name")
 		return result
@@ -129,24 +152,37 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 	command := args[2]
 	commandArgs := args[3:]
 
+	// find environment
+	envIds := service.Environments
+	var env Environment
+	// if only one is define use it as default
+	if len(envIds) == 1 {
+		envConf, present := c.Environments[envIds[0]]
+		if present {
+			env = envConf
+		}
+	} else {
+
+	}
+
 	// search if a command is defined
 	commandList, present := service.Commands[command]
 	if present {
 		result.commandID = command
 		for _, commands := range commandList {
 			commandsSplit := strings.Fields(commands)
-			c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, datacenter.Environment)
+			c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, env)
 		}
 		return result
 	}
 
 	// Execute command in service directory
 	result.commandID = "-"
-	result.execError = c.executeCommand(command, commandArgs, servicePath, datacenter.Environment)
+	result.execError = c.executeCommand(command, commandArgs, servicePath, env)
 	return result
 }
 
-func (c *Compose) executeCommand(name string, args []string, dir string, env []string) error {
+func (c *Compose) executeCommand(name string, args []string, dir string, env Environment) error {
 	if c.DryRun {
 		fmt.Println("Dry-run: Plan to Execute ")
 		fmt.Println("Exec : " + name + " " + strings.Join(args, " "))

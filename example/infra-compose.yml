@@ -1,39 +1,33 @@
 version: '1'
-datacenters:
+environments:
   europe:
-    environment:
-      - OS_REGION_NAME=EUR
-    services:
-      global:
-        path: global
-        commands:
-          init: [terraform init]
-          up: ['terraform apply', 'terraform version']
-          down: [terraform destroy]        
-      bastion:
-        path: mgmt/services/bastion
-        commands:
-          init: [terraform init]
-          up: [terraform apply]
-          down: [terraform destroy -force]
-          ssh: [script-ssh-connect.sh]
+    - OS_REGION_NAME=EUR
   USEast:
-    environment:
-      - OS_REGION_NAME=US-EAST
-    services:
-      global:
-        path: global
-        commands:
-          init: [terraform init]
-          up: [terraform apply]
-          down: [terraform destroy]        
+    - OS_REGION_NAME=US-EAST
+
+services:
+  global:
+    path: global
+    commands:
+      init: [terraform init]
+      up: ['terraform apply', 'terraform version']
+      down: [terraform destroy]        
+  bastion:
+    path: mgmt/services/bastion
+    environments:
+      - europe
+    commands:
+      init: [terraform init]
+      up: [terraform apply]
+      down: [terraform destroy -force]
+      ssh: [script-ssh-connect.sh]
 
 commands:
   init:
-    - europe global init
-    - europe bastion init
+    - global init
+    - bastion init
   up:
-    - europe global up
-    - USEast global up
-    - europe bastion up
-  down: [europe bastion down]
+    - env=europe global up
+    - env=USEast global up
+    - bastion up
+  down: [bastion down]
