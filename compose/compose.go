@@ -75,9 +75,9 @@ func (c *Compose) Exec(args []string) error {
 
 // List ... List all available command
 func (c *Compose) List(args []string) error {
-	const padding = 4
+	const padding = 5
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
-	fmt.Fprintln(w, "Command\tSub-Command\t")
+	fmt.Fprintln(w, "SERVICE\tCOMMAND\tSub-Command\t")
 	//	fmt.Fprintln(w, "\t\t\t")
 
 	var keys []string
@@ -87,13 +87,15 @@ func (c *Compose) List(args []string) error {
 	sort.Strings(keys)
 	for _, k := range keys {
 		subcmds := c.Commands[k]
-		fmt.Fprintln(w, "\t\t\t")
 
 		cmd := k
-		for _, subcmd := range subcmds {
-			fmt.Fprintf(w, "%s\t%s\t\n", cmd, subcmd)
-			cmd = ""
-		}
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t\n", "", cmd, strings.Join(subcmds, " / "))
+
+		//		for _, subcmd := range subcmds {
+		//			fmt.Fprintf(w, "%s\t%s\t\n", cmd, subcmd)
+		//			cmd = ""
+		//		}
 
 	}
 
@@ -107,8 +109,8 @@ func dumpExecResults(execResults []execResult) {
 	fmt.Println()
 	const padding = 4
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
-	fmt.Fprintln(w, "Environment\tService\tCommand\tStatus\t")
-	fmt.Fprintln(w, "\t\t\t\t\t\t")
+	fmt.Fprintln(w, "ENVIRONMENT\tSERVICE\tCOMMAND\tSTATUS\t")
+	//	fmt.Fprintln(w, "\t\t\t\t\t\t")
 	for _, res := range execResults {
 		status := "Success"
 		if res.execError != nil {
