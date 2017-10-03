@@ -14,8 +14,8 @@ services:
       down: [terraform destroy]        
   bastion:
     path: mgmt/services/bastion
-    environments:
-      - europe
+    environment:
+      - OS_REGION_NAME=EURCUSTOM
     commands:
       init: [terraform init]
       up: [terraform apply]
@@ -27,7 +27,7 @@ commands:
     - global init
     - bastion init
   up:
-    - env=europe global up
-    - env=USEast global up
+    - europe global up
+    - USEast global up
     - bastion up
   down: [bastion down]

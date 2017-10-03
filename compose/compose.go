@@ -20,9 +20,9 @@ type Commands map[string]Command
 
 // Service ...
 type Service struct {
-	Path         string
-	Commands     Commands
-	Environments []string
+	Path        string
+	Commands    Commands
+	Environment Environment
 }
 
 type Environment []string
@@ -39,11 +39,11 @@ type Compose struct {
 }
 
 type execResult struct {
-	datacenterID string
-	serviceID    string
-	commandID    string
-	command      Command
-	execError    error
+	environmentID string
+	serviceID     string
+	commandID     string
+	command       Command
+	execError     error
 }
 
 // Exec ...
@@ -75,14 +75,10 @@ func (c *Compose) Exec(args []string) error {
 
 // List ... List all available command
 func (c *Compose) List(args []string) error {
-	fmt.Println("Commands")
-	fmt.Println()
 	const padding = 4
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
 	fmt.Fprintln(w, "Command\tSub-Command\t")
 	//	fmt.Fprintln(w, "\t\t\t")
-
-	//	c.Commands
 
 	var keys []string
 	for k := range c.Commands {
@@ -90,14 +86,18 @@ func (c *Compose) List(args []string) error {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		cmd := c.Commands[k]
-		fmt.Fprintf(w, "%s\t%s\t\n", k,
-			strings.Join(cmd, " "))
+		subcmds := c.Commands[k]
+		fmt.Fprintln(w, "\t\t\t")
+
+		cmd := k
+		for _, subcmd := range subcmds {
+			fmt.Fprintf(w, "%s\t%s\t\n", cmd, subcmd)
+			cmd = ""
+		}
 
 	}
 
 	w.Flush()
-	fmt.Println()
 
 	return nil
 }
@@ -107,14 +107,14 @@ func dumpExecResults(execResults []execResult) {
 	fmt.Println()
 	const padding = 4
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
-	fmt.Fprintln(w, "Datacenter\tService\tCommand\tStatus\t")
-	fmt.Fprintln(w, "\t\t\t\t\t")
+	fmt.Fprintln(w, "Environment\tService\tCommand\tStatus\t")
+	fmt.Fprintln(w, "\t\t\t\t\t\t")
 	for _, res := range execResults {
 		status := "Success"
 		if res.execError != nil {
 			status = "Error"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t\n", res.datacenterID,
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t\n", res.environmentID,
 			res.serviceID, res.commandID, status)
 	}
 	w.Flush()
@@ -129,12 +129,18 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 	result := execResult{}
 	//	fmt.Println("Exec args:" + strings.Join(args, " "))
 
-	// else find datacenter service
-	datacenterName := args[0]
+	var env Environment
 
-	result.datacenterID = datacenterName
+	// check if environment is defined
+	envID := args[0]
+	envConf, present := c.Environments[envID]
+	if present {
+		env = envConf
+		args = args[1:]
+		result.environmentID = envID
+	}
 
-	serviceName := args[1]
+	serviceName := args[0]
 	result.serviceID = serviceName
 	service, present := c.Services[serviceName]
 	if !present {
@@ -149,21 +155,12 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 		return result
 	}
 
-	command := args[2]
-	commandArgs := args[3:]
+	command := args[1]
+	commandArgs := args[2:]
 
-	// find environment
-	envIds := service.Environments
-	var env Environment
-	// if only one is define use it as default
-	if len(envIds) == 1 {
-		envConf, present := c.Environments[envIds[0]]
-		if present {
-			env = envConf
-		}
-	} else {
-
-	}
+	// Merge service environment
+	// TODO env variable can be present both. We should write a better merge function
+	env = append(env, service.Environment...)
 
 	// search if a command is defined
 	commandList, present := service.Commands[command]
@@ -184,7 +181,7 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 
 func (c *Compose) executeCommand(name string, args []string, dir string, env Environment) error {
 	if c.DryRun {
-		fmt.Println("Dry-run: Plan to Execute ")
+		//		fmt.Println("Plan to Execute ")
 		fmt.Println("Exec : " + name + " " + strings.Join(args, " "))
 		fmt.Println("Dir  : " + dir)
 		fmt.Println("Env  : " + strings.Join(env, " "))

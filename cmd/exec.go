@@ -19,54 +19,46 @@ import (
 	"github.com/wayoos/infra-compose/compose"
 )
 
-var dryRun bool
-
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
-	Use:   "exec",
-	Short: "Run a global or service command.",
-	Long:  `Run a global or service command.`,
+	Use:   "exec [flags] [ENVIRONMENT] [SERVICE] COMMAND [ARGS...]",
+	Short: "Run a global or service command",
+	Long:  `Run a global or service command`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Parse flag and ignore invalid flag used in sub command
-		cmd.Flags().Parse(args)
-
-		if args[0] == "--help" || args[0] == "-h" {
-			cmd.HelpFunc()(cmd, args)
-			return nil
-		}
-
-		compose := compose.Compose{}
-		compose.DryRun = dryRun
-		err := compose.Load(composeFile, projectDir)
-		if err != nil {
-			return err
-		}
-
-		// remove global flags
-		firstCmdArg := cmd.Flags().Arg(0)
-		validArgs := args
-		for firstCmdArg != validArgs[0] {
-			validArgs = validArgs[1:]
-		}
-
-		return compose.Exec(validArgs)
+		return runExecute(cmd, args, false)
 	},
 	DisableFlagParsing: true,
 	SilenceUsage:       true,
 	SilenceErrors:      true,
 }
 
+func runExecute(cmd *cobra.Command, args []string, dryRun bool) error {
+	// Parse flag and ignore invalid flag used in sub command
+	cmd.Flags().Parse(args)
+
+	if args[0] == "--help" || args[0] == "-h" {
+		cmd.HelpFunc()(cmd, args)
+		return nil
+	}
+
+	compose := compose.Compose{}
+	compose.DryRun = dryRun
+	err := compose.Load(composeFile, projectDir)
+	if err != nil {
+		return err
+	}
+
+	// remove global flags
+	firstCmdArg := cmd.Flags().Arg(0)
+	validArgs := args
+	for firstCmdArg != validArgs[0] {
+		validArgs = validArgs[1:]
+	}
+
+	return compose.Exec(validArgs)
+}
+
 func init() {
 	RootCmd.AddCommand(execCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// execCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	execCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "If true, only print command that would be executed, without executing it.")
 }

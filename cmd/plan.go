@@ -16,29 +16,22 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/wayoos/infra-compose/compose"
 )
 
-// listCmd represents the list command
-var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all global or service command",
-	Long:  `List all global or service command`,
-	Args:  cobra.MinimumNArgs(0),
+// planCmd represents the plan command
+var planCmd = &cobra.Command{
+	Use:   "plan [flags] [ENVIRONMENT] [SERVICE] COMMAND [ARGS...]",
+	Short: "Generate and show an execution plan",
+	Long:  `Generate and show an execution plan`,
+	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-
-		compose := compose.Compose{}
-		err := compose.Load(composeFile, projectDir)
-		if err != nil {
-			return err
-		}
-
-		return compose.List(args)
+		return runExecute(cmd, args, true)
 	},
-	SilenceUsage:  true,
-	SilenceErrors: true,
+	DisableFlagParsing: true,
+	SilenceUsage:       true,
+	SilenceErrors:      true,
 }
 
 func init() {
-	RootCmd.AddCommand(listCmd)
+	RootCmd.AddCommand(planCmd)
 }
