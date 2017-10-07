@@ -75,10 +75,37 @@ func (c *Compose) Exec(args []string) error {
 
 // List ... List all available command
 func (c *Compose) List(args []string) error {
-	const padding = 5
+	const padding = 8
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
-	fmt.Fprintln(w, "SERVICE\tCOMMAND\tSub-Command\t")
+	fmt.Fprintln(w, "SERVICE\tCOMMAND\tSUB-COMMAND\t")
 	//	fmt.Fprintln(w, "\t\t\t")
+
+	var srvKeys []string
+	for k := range c.Services {
+		srvKeys = append(srvKeys, k)
+	}
+	sort.Strings(srvKeys)
+	for _, k := range srvKeys {
+		service := c.Services[k]
+		srv := k
+
+		var cmdKeys []string
+		for k := range service.Commands {
+			cmdKeys = append(cmdKeys, k)
+		}
+
+		for _, cmdID := range cmdKeys {
+			subcmds := service.Commands[cmdID]
+			fmt.Fprintf(w, "%s\t%s\t%s\t\n", srv, cmdID, strings.Join(subcmds, " | "))
+
+		}
+
+		//		for _, subcmd := range subcmds {
+		//			fmt.Fprintf(w, "%s\t%s\t\n", cmd, subcmd)
+		//			cmd = ""
+		//		}
+
+	}
 
 	var keys []string
 	for k := range c.Commands {
@@ -90,7 +117,7 @@ func (c *Compose) List(args []string) error {
 
 		cmd := k
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t\n", "", cmd, strings.Join(subcmds, " / "))
+		fmt.Fprintf(w, "%s\t%s\t%s\t\n", "", cmd, strings.Join(subcmds, " | "))
 
 		//		for _, subcmd := range subcmds {
 		//			fmt.Fprintf(w, "%s\t%s\t\n", cmd, subcmd)
