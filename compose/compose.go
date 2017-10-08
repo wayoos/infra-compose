@@ -78,57 +78,47 @@ func (c *Compose) List(args []string) error {
 	const padding = 8
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
 	fmt.Fprintln(w, "SERVICE\tCOMMAND\tSUB-COMMAND\t")
-	//	fmt.Fprintln(w, "\t\t\t")
 
 	var srvKeys []string
 	for k := range c.Services {
 		srvKeys = append(srvKeys, k)
 	}
 	sort.Strings(srvKeys)
-	for _, k := range srvKeys {
-		service := c.Services[k]
-		srv := k
-
-		var cmdKeys []string
-		for k := range service.Commands {
-			cmdKeys = append(cmdKeys, k)
-		}
-
-		for _, cmdID := range cmdKeys {
-			subcmds := service.Commands[cmdID]
-			fmt.Fprintf(w, "%s\t%s\t%s\t\n", srv, cmdID, strings.Join(subcmds, " | "))
-
-		}
-
-		//		for _, subcmd := range subcmds {
-		//			fmt.Fprintf(w, "%s\t%s\t\n", cmd, subcmd)
-		//			cmd = ""
-		//		}
-
+	for _, srv := range srvKeys {
+		service := c.Services[srv]
+		dumpCommand(w, srv, service.Commands)
 	}
 
-	var keys []string
-	for k := range c.Commands {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		subcmds := c.Commands[k]
-
-		cmd := k
-
-		fmt.Fprintf(w, "%s\t%s\t%s\t\n", "", cmd, strings.Join(subcmds, " | "))
-
-		//		for _, subcmd := range subcmds {
-		//			fmt.Fprintf(w, "%s\t%s\t\n", cmd, subcmd)
-		//			cmd = ""
-		//		}
-
-	}
+	dumpCommand(w, "", c.Commands)
 
 	w.Flush()
 
 	return nil
+}
+
+func dumpCommand(w *tabwriter.Writer, serviceName string, commands Commands) {
+	// sort command
+	var keys []string
+	for k := range commands {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, cmd := range keys {
+		subCommands := commands[cmd]
+
+		commandList := ellipsis(40, strings.Join(subCommands, " | "))
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t\n", serviceName, cmd, commandList)
+	}
+}
+
+func ellipsis(length int, text string) string {
+	r := []rune(text)
+	if len(r) > length {
+		return string(r[0:length]) + "..."
+	}
+	return text
 }
 
 func dumpExecResults(execResults []execResult) {
