@@ -15,12 +15,12 @@ services:
   bastion:
     path: mgmt/services/bastion
     environment:
-      - OS_REGION_NAME=EURCUSTOM
+      - OS_REGION_NAME2=EURCUSTOM
     commands:
       init: [terraform init]
       up: [terraform apply]
       down: [terraform destroy -force]
-      ssh: [script-ssh-connect.sh]
+      ssh: [./script-ssh-connect.sh]
 
 commands:
   init:

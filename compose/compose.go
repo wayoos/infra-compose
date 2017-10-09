@@ -178,8 +178,7 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 	commandArgs := args[2:]
 
 	// Merge service environment
-	// TODO env variable can be present both. We should write a better merge function
-	env = append(env, service.Environment...)
+	env = appendEnv(service.Environment, env)
 
 	// search if a command is defined
 	commandList, present := service.Commands[command]
@@ -214,7 +213,7 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
-	fullEnv := append(os.Environ(), env...)
+	fullEnv := appendEnv(env, os.Environ())
 	cmd.Env = fullEnv
 
 	err := cmd.Run()
