@@ -186,7 +186,11 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 		result.commandID = command
 		for _, commands := range commandList {
 			commandsSplit := strings.Fields(commands)
-			c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, env)
+			err = c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, env)
+			if err != nil {
+				result.execError = err
+				return result
+			}
 		}
 		return result
 	}
@@ -217,6 +221,9 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 	cmd.Env = fullEnv
 
 	err := cmd.Run()
+
+	fmt.Println("State: " + cmd.ProcessState.String())
+
 	if err != nil {
 		return errors.New("Execute command error. " + err.Error())
 	}
