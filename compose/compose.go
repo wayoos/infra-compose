@@ -247,7 +247,11 @@ func (c *Compose) loadCompose(composeFile string) error {
 		return err
 	}
 
-	err = yaml.Unmarshal(source, &c)
+	composeStr := string(source)
+
+	composeParsed := os.ExpandEnv(composeStr)
+
+	err = yaml.Unmarshal([]byte(composeParsed), &c)
 	if err != nil {
 		return err
 	}
