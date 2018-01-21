@@ -20,6 +20,8 @@ type Commands map[string]Command
 
 // Service ...
 type Service struct {
+	Abstract    bool
+	Parent      string
 	Path        string
 	Commands    Commands
 	Environment Environment
@@ -32,7 +34,6 @@ type Compose struct {
 	Version      string
 	projectDir   string
 	Services     map[string]Service
-	Commands     Commands
 	Environments map[string]Environment
 
 	DryRun bool
@@ -49,24 +50,24 @@ type execResult struct {
 // Exec ...
 func (c *Compose) Exec(args []string) error {
 	var execResults []execResult
-	serviceCmdAlias := args[0]
+	//serviceCmdAlias := args[0]
 
-	cmds, present := c.Commands[serviceCmdAlias]
-	var err error
-	if present {
-		for _, cmd := range cmds {
-			res := c.execServiceCmd(cmd)
-			execResults = append(execResults, res)
-			err = res.execError
-			if res.execError != nil {
-				break
-			}
-		}
-	} else {
-		res := c.execServiceCmds(args)
-		execResults = append(execResults, res)
-		err = res.execError
-	}
+	// cmds, present := c.Commands[serviceCmdAlias]
+	// var err error
+	// if present {
+	// 	for _, cmd := range cmds {
+	// 		res := c.execServiceCmd(cmd)
+	// 		execResults = append(execResults, res)
+	// 		err = res.execError
+	// 		if res.execError != nil {
+	// 			break
+	// 		}
+	// 	}
+	// } else {
+	res := c.execServiceCmds(args)
+	execResults = append(execResults, res)
+	err := res.execError
+	//}
 
 	dumpExecResults(execResults)
 
@@ -80,20 +81,38 @@ func (c *Compose) List(args []string) error {
 	fmt.Fprintln(w, "SERVICE\tCOMMAND\tSUB-COMMAND\t")
 
 	var srvKeys []string
-	for k := range c.Services {
-		srvKeys = append(srvKeys, k)
+	for k, srv := range c.Services {
+		if !srv.Abstract {
+			srvKeys = append(srvKeys, k)
+		}
 	}
 	sort.Strings(srvKeys)
 	for _, srv := range srvKeys {
 		service := c.Services[srv]
-		dumpCommand(w, srv, service.Commands)
-	}
 
-	dumpCommand(w, "", c.Commands)
+		commands := Commands{}
+
+		if service.Parent != "" {
+			parentService := c.Services[service.Parent]
+			for cmdKey, cmd := range parentService.Commands {
+				commands[cmdKey] = cmd
+			}
+		}
+
+		for cmdKey, cmd := range service.Commands {
+			commands[cmdKey] = cmd
+		}
+
+		dumpCommand(w, srv, commands)
+	}
 
 	w.Flush()
 
 	return nil
+}
+
+func (c *Compose) findServiceCommand(service Service) {
+
 }
 
 func dumpCommand(w *tabwriter.Writer, serviceName string, commands Commands) {

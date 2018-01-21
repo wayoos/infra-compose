@@ -6,28 +6,28 @@ environments:
     - OS_REGION_NAME=US-EAST
 
 services:
-  global:
-    path: global
+  terraform:
+    abstract: true
     commands:
-      init: [terraform init]
-      up: ['terraform apply', 'terraform version']
-      down: [terraform destroy]        
+      init: [terraform init -backend-config=$HOME/.wayoos/backend-variables.tf]
+      up: [terraform apply]
+      down: [terraform destroy -force]
+  global:
+    parent: terraform
+    path: global
   bastion:
+    parent: terraform
     path: mgmt/services/bastion
     environment:
       - OS_REGION_NAME2=EURCUSTOM
     commands:
-      init: [terraform init]
-      up: [terraform apply]
-      down: [terraform destroy -force]
       ssh: [./script-ssh-connect.sh]
-
-commands:
-  init:
-    - global init
-    - bastion init
   up:
-    - europe global up
-    - USEast global up
-    - bastion up
-  down: [bastion down]
+    commands:
+      all:
+        - europe global up
+        - USEast global up
+        - bastion up
+  down:
+    commands:
+      all: [bastion down]
