@@ -8,8 +8,16 @@ environments:
 services:
   terraform:
     abstract: true
+    variables:
+      backend-variables:
+        file: .terraform/backend-variables.tf
+        environment:
+          - "project = \"wayoos-terraform-admin\""
+          - "bucket = \"${branch.first}.tfstate.wayoos.info\""
     commands:
-      init: [terraform init -backend-config=$HOME/.wayoos/backend-variables.tf]
+      init:
+        - terraform init $HOME
+        - terraform workspace new ${branch.last}
       up: [terraform apply]
       down: [terraform destroy -force]
   global:

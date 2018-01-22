@@ -18,6 +18,10 @@ type Command []string
 
 type Commands map[string]Command
 
+type VariableFile struct {
+	File string
+}
+
 // Service ...
 type Service struct {
 	Abstract    bool
@@ -25,6 +29,7 @@ type Service struct {
 	Path        string
 	Commands    Commands
 	Environment Environment
+	variables   map[string]VariableFile
 }
 
 type Environment []string
@@ -91,13 +96,6 @@ func (c *Compose) List(args []string) error {
 		service := c.Services[srv]
 
 		commands := Commands{}
-
-		if service.Parent != "" {
-			parentService := c.Services[service.Parent]
-			for cmdKey, cmd := range parentService.Commands {
-				commands[cmdKey] = cmd
-			}
-		}
 
 		for cmdKey, cmd := range service.Commands {
 			commands[cmdKey] = cmd
@@ -205,7 +203,7 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 		result.commandID = command
 		for _, commands := range commandList {
 			commandsSplit := strings.Fields(commands)
-			err = c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, env)
+			err = c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, env, service)
 			if err != nil {
 				result.execError = err
 				return result
@@ -216,11 +214,11 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 
 	// Execute command in service directory
 	result.commandID = "-"
-	result.execError = c.executeCommand(command, commandArgs, servicePath, env)
+	result.execError = c.executeCommand(command, commandArgs, servicePath, env, service)
 	return result
 }
 
-func (c *Compose) executeCommand(name string, args []string, dir string, env Environment) error {
+func (c *Compose) executeCommand(name string, args []string, dir string, env Environment, service Service) error {
 	if c.DryRun {
 		//		fmt.Println("Plan to Execute ")
 		fmt.Println("Exec : " + name + " " + strings.Join(args, " "))
@@ -229,6 +227,8 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 		fmt.Println("")
 		return nil
 	}
+
+	// create variables files
 
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
@@ -257,7 +257,25 @@ func (c *Compose) Load(file string, projectDir string) error {
 		return err
 	}
 
-	return c.loadCompose(validComposeFile)
+	err = c.loadCompose(validComposeFile)
+
+	c.init()
+
+	return err
+}
+
+func (c *Compose) init() {
+	for _, service := range c.Services {
+		if service.Parent != "" {
+			parentService := c.Services[service.Parent]
+			for cmdKey, cmd := range parentService.Commands {
+				if service.Commands == nil {
+					service.Commands = make(Commands)
+				}
+				service.Commands[cmdKey] = cmd
+			}
+		}
+	}
 }
 
 func (c *Compose) loadCompose(composeFile string) error {
@@ -267,6 +285,9 @@ func (c *Compose) loadCompose(composeFile string) error {
 	}
 
 	composeStr := string(source)
+
+	os.Setenv("branch.first", "prod")
+	os.Setenv("branch.last", "prod")
 
 	composeParsed := os.ExpandEnv(composeStr)
 
