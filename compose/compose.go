@@ -19,7 +19,8 @@ type Command []string
 type Commands map[string]Command
 
 type VariableFile struct {
-	File string
+	File        string
+	Environment Environment
 }
 
 // Service ...
@@ -29,7 +30,7 @@ type Service struct {
 	Path        string
 	Commands    Commands
 	Environment Environment
-	variables   map[string]VariableFile
+	Variables   map[string]VariableFile
 }
 
 type Environment []string
@@ -219,6 +220,18 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 }
 
 func (c *Compose) executeCommand(name string, args []string, dir string, env Environment, service Service) error {
+
+	for _, variableFile := range service.Variables {
+		fmt.Println("Var file  : " + variableFile.File)
+
+		outputVars := ""
+		for _, variable := range variableFile.Environment {
+			outputVars += variable + "\n"
+		}
+
+		ioutil.WriteFile(variableFile.File, []byte(outputVars), 0644)
+	}
+
 	if c.DryRun {
 		//		fmt.Println("Plan to Execute ")
 		fmt.Println("Exec : " + name + " " + strings.Join(args, " "))
@@ -265,7 +278,8 @@ func (c *Compose) Load(file string, projectDir string) error {
 }
 
 func (c *Compose) init() {
-	for _, service := range c.Services {
+	services := make(map[string]Service)
+	for serviceKey, service := range c.Services {
 		if service.Parent != "" {
 			parentService := c.Services[service.Parent]
 			for cmdKey, cmd := range parentService.Commands {
@@ -274,8 +288,18 @@ func (c *Compose) init() {
 				}
 				service.Commands[cmdKey] = cmd
 			}
+
+			for varKey, variable := range parentService.Variables {
+				if service.Variables == nil {
+					service.Variables = make(map[string]VariableFile)
+				}
+				service.Variables[varKey] = variable
+			}
 		}
+		services[serviceKey] = service
 	}
+
+	c.Services = services
 }
 
 func (c *Compose) loadCompose(composeFile string) error {
