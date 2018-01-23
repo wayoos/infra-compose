@@ -12,7 +12,6 @@ import (
 	"text/tabwriter"
 
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -229,14 +228,20 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 	if gitErr == nil {
 		repo, repoErr := git.PlainOpen(gitDir)
 		if repoErr == nil {
-			refIter, _ := repo.Branches()
+			ref, headErr := repo.Head()
+			if headErr == nil {
+				branch := ref.Name().Short()
 
-			refIter.ForEach(func(r *plumbing.Reference) error {
+				branchSplit := strings.Split(branch, "/")
 
-				return nil
-			})
+				branchFirst := branchSplit[0]
+				branchLast := branchSplit[len(branchSplit)-1]
 
-			refIter.Close()
+				os.Setenv("branch", branch)
+				os.Setenv("branch.first", branchFirst)
+				os.Setenv("branch.last", branchLast)
+
+			}
 		}
 	}
 
@@ -245,7 +250,7 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 
 		outputVars := ""
 		for _, variable := range variableFile.Environment {
-			outputVars += variable + "\n"
+			outputVars += os.ExpandEnv(variable) + "\n"
 		}
 
 		ioutil.WriteFile(variableFile.File, []byte(outputVars), 0644)
