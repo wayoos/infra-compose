@@ -11,6 +11,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -221,6 +223,23 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 
 func (c *Compose) executeCommand(name string, args []string, dir string, env Environment, service Service) error {
 
+	// Find git branch name
+	// TODO extract in util
+	gitDir, gitErr := findGitRepo(dir)
+	if gitErr == nil {
+		repo, repoErr := git.PlainOpen(gitDir)
+		if repoErr == nil {
+			refIter, _ := repo.Branches()
+
+			refIter.ForEach(func(r *plumbing.Reference) error {
+
+				return nil
+			})
+
+			refIter.Close()
+		}
+	}
+
 	for _, variableFile := range service.Variables {
 		fmt.Println("Var file  : " + variableFile.File)
 
@@ -310,12 +329,12 @@ func (c *Compose) loadCompose(composeFile string) error {
 
 	composeStr := string(source)
 
-	os.Setenv("branch.first", "prod")
-	os.Setenv("branch.last", "prod")
+	//	os.Setenv("branch.first", "prod")
+	//	os.Setenv("branch.last", "prod")
 
-	composeParsed := os.ExpandEnv(composeStr)
+	//	composeParsed := os.ExpandEnv(composeStr)
 
-	err = yaml.Unmarshal([]byte(composeParsed), &c)
+	err = yaml.Unmarshal([]byte(composeStr), &c)
 	if err != nil {
 		return err
 	}
@@ -324,6 +343,25 @@ func (c *Compose) loadCompose(composeFile string) error {
 	c.projectDir = filepath.Dir(absFileName)
 
 	return nil
+}
+
+func findGitRepo(dir string) (string, error) {
+	gitDir := dir + "/.git"
+
+	_, err := os.Stat(gitDir)
+	if err != nil {
+		// if not root path find in parent
+		absProjectDir, _ := filepath.Abs(dir)
+		parentDir := filepath.Dir(absProjectDir)
+
+		if absProjectDir == "/" {
+			return "", errors.New("Git repo not found")
+		}
+
+		return findGitRepo(parentDir)
+	}
+
+	return dir, nil
 }
 
 func findComposeFile(file string, projectDir string) (string, error) {
