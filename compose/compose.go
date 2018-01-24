@@ -256,9 +256,14 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 		ioutil.WriteFile(variableFile.File, []byte(outputVars), 0644)
 	}
 
+	argsExpandedEnv := []string{}
+	for _, arg := range args {
+		argsExpandedEnv = append(argsExpandedEnv, os.ExpandEnv(arg))
+	}
+
 	if c.DryRun {
 		//		fmt.Println("Plan to Execute ")
-		fmt.Println("Exec : " + name + " " + strings.Join(args, " "))
+		fmt.Println("Exec : " + name + " " + strings.Join(argsExpandedEnv, " "))
 		fmt.Println("Dir  : " + dir)
 		fmt.Println("Env  : " + strings.Join(env, " "))
 		fmt.Println("")
@@ -267,7 +272,7 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 
 	// create variables files
 
-	cmd := exec.Command(name, args...)
+	cmd := exec.Command(name, argsExpandedEnv...)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
