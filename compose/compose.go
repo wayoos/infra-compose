@@ -223,7 +223,7 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 		}
 	}
 
-	if c.DryRun {
+	if !c.DryRun {
 		// create variables files
 		for _, variableFile := range service.Variables {
 			fmt.Println("Var file  : " + variableFile.File)
@@ -271,11 +271,16 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 		argsExpandedEnv = append(argsExpandedEnv, os.ExpandEnv(arg))
 	}
 
+	envExpandedEnv := []string{}
+	for _, e := range env {
+		envExpandedEnv = append(envExpandedEnv, os.ExpandEnv(e))
+	}
+
 	if c.DryRun {
 		//		fmt.Println("Plan to Execute ")
 		fmt.Println("Exec : " + name + " " + strings.Join(argsExpandedEnv, " "))
 		fmt.Println("Dir  : " + dir)
-		fmt.Println("Env  : " + strings.Join(env, " "))
+		fmt.Println("Env  : " + strings.Join(envExpandedEnv, " "))
 		fmt.Println("")
 		return nil
 	}
@@ -286,7 +291,7 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
-	fullEnv := appendEnv(env, os.Environ())
+	fullEnv := appendEnv(envExpandedEnv, os.Environ())
 	cmd.Env = fullEnv
 
 	err := cmd.Run()
