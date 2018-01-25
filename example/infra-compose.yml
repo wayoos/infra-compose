@@ -1,4 +1,6 @@
 version: '1'
+environment:
+  - GLOBAL=value
 environments:
   europe:
     - OS_REGION_NAME=EUR

@@ -42,6 +42,7 @@ type Compose struct {
 	projectDir   string
 	Services     map[string]Service
 	Environments map[string]Environment
+	Environment  Environment
 
 	DryRun bool
 }
@@ -199,6 +200,48 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 	// Merge service environment
 	env = appendEnv(service.Environment, env)
 
+	// Find git branch name
+	// TODO extract in util
+	gitDir, gitErr := findGitRepo(servicePath)
+	if gitErr == nil {
+		repo, repoErr := git.PlainOpen(gitDir)
+		if repoErr == nil {
+			ref, headErr := repo.Head()
+			if headErr == nil {
+				branch := ref.Name().Short()
+
+				branchSplit := strings.Split(branch, "/")
+
+				branchFirst := branchSplit[0]
+				branchLast := branchSplit[len(branchSplit)-1]
+
+				os.Setenv("branch", branch)
+				os.Setenv("branch.first", branchFirst)
+				os.Setenv("branch.last", branchLast)
+
+			}
+		}
+	}
+
+	if c.DryRun {
+		// create variables files
+		for _, variableFile := range service.Variables {
+			fmt.Println("Var file  : " + variableFile.File)
+			absProjectDir, _ := filepath.Abs(variableFile.File)
+			parentDir := filepath.Dir(absProjectDir)
+
+			fmt.Println("MkDir  : " + parentDir)
+			os.MkdirAll(parentDir, 0755)
+
+			outputVars := ""
+			for _, variable := range variableFile.Environment {
+				outputVars += os.ExpandEnv(variable) + "\n"
+			}
+
+			ioutil.WriteFile(variableFile.File, []byte(outputVars), 0644)
+		}
+	}
+
 	// search if a command is defined
 	commandList, present := service.Commands[command]
 	if present {
@@ -223,29 +266,6 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 func (c *Compose) executeCommand(name string, args []string, dir string, env Environment, service Service) error {
 	os.Setenv("service.home", dir)
 
-	// Find git branch name
-	// TODO extract in util
-	gitDir, gitErr := findGitRepo(dir)
-	if gitErr == nil {
-		repo, repoErr := git.PlainOpen(gitDir)
-		if repoErr == nil {
-			ref, headErr := repo.Head()
-			if headErr == nil {
-				branch := ref.Name().Short()
-
-				branchSplit := strings.Split(branch, "/")
-
-				branchFirst := branchSplit[0]
-				branchLast := branchSplit[len(branchSplit)-1]
-
-				os.Setenv("branch", branch)
-				os.Setenv("branch.first", branchFirst)
-				os.Setenv("branch.last", branchLast)
-
-			}
-		}
-	}
-
 	argsExpandedEnv := []string{}
 	for _, arg := range args {
 		argsExpandedEnv = append(argsExpandedEnv, os.ExpandEnv(arg))
@@ -258,18 +278,6 @@ func (c *Compose) executeCommand(name string, args []string, dir string, env Env
 		fmt.Println("Env  : " + strings.Join(env, " "))
 		fmt.Println("")
 		return nil
-	}
-
-	// create variables files
-	for _, variableFile := range service.Variables {
-		fmt.Println("Var file  : " + variableFile.File)
-
-		outputVars := ""
-		for _, variable := range variableFile.Environment {
-			outputVars += os.ExpandEnv(variable) + "\n"
-		}
-
-		ioutil.WriteFile(variableFile.File, []byte(outputVars), 0644)
 	}
 
 	cmd := exec.Command(name, argsExpandedEnv...)
@@ -332,6 +340,13 @@ func (c *Compose) init() {
 				service.Environment = append(service.Environment, env)
 			}
 		}
+		for _, env := range c.Environment {
+			if service.Environment == nil {
+				service.Environment = Environment{}
+			}
+			service.Environment = append(service.Environment, env)
+		}
+
 		services[serviceKey] = service
 	}
 
