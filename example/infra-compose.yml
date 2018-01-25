@@ -8,6 +8,8 @@ environments:
 services:
   terraform:
     abstract: true
+    environment:
+      - TEST=Value
     variables:
       backend-variables:
         file: .terraform/backend-variables.tf
