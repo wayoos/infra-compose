@@ -29,10 +29,14 @@ services:
       - OS_REGION_NAME2=EURCUSTOM
     commands:
       ssh: [./script-ssh-connect.sh]
+      test:
+        - $global down
   up:
     command:
-      - global up
+      - $global up
       - $bastion up
+      - $bastion ssh
+      - $bastion test
   down:
     commands:
       all: [bastion down]

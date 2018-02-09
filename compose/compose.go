@@ -307,14 +307,25 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 		result.commandID = command
 		for _, commands := range commandList {
 			commandsSplit := strings.Fields(commands)
-			err = c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, env, service)
-			if err != nil {
-				result.execError = err
+			cmd := commandsSplit[0]
+			if strings.HasPrefix(cmd, "$") {
+				newArgs := []string{cmd[1:]}
+				args := commandsSplit[1:]
+				newArgs = append(newArgs, args...)
+				execResults, err := c.execServiceCmds(newArgs, execResults)
+				if err != nil {
+					return execResults, err
+				}
+			} else {
+				err = c.executeCommand(cmd, commandsSplit[1:], servicePath, env, service)
+				if err != nil {
+					result.execError = err
+					execResults.add(result)
+					return execResults, err
+				}
 				execResults.add(result)
-				return execResults, err
 			}
 		}
-		execResults.add(result)
 		return execResults, err
 	}
 
