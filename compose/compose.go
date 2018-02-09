@@ -392,40 +392,51 @@ func (c *Compose) Load(file string, projectDir string) error {
 	return err
 }
 
-func (c *Compose) init() {
-	services := make(map[string]Service)
-	for serviceKey, service := range c.Services {
-		if service.Parent != "" {
-			parentService := c.Services[service.Parent]
-			for cmdKey, cmd := range parentService.Commands {
-				if service.Commands == nil {
-					service.Commands = make(Commands)
-				}
-				service.Commands[cmdKey] = cmd
-			}
+func (c *Compose) mergeParent(service *Service, currentService Service) {
+	if currentService.Parent != "" {
+		parentService := c.Services[currentService.Parent]
 
-			for varKey, variable := range parentService.Variables {
-				if service.Variables == nil {
-					service.Variables = make(map[string]VariableFile)
-				}
-				service.Variables[varKey] = variable
-			}
+		c.mergeParent(service, parentService)
 
-			for _, env := range parentService.Environment {
-				if service.Environment == nil {
-					service.Environment = Environment{}
-				}
-				service.Environment = append(service.Environment, env)
+		for cmdKey, cmd := range parentService.Commands {
+			if service.Commands == nil {
+				service.Commands = make(Commands)
 			}
+			service.Commands[cmdKey] = cmd
 		}
-		for _, env := range c.Environment {
+
+		for varKey, variable := range parentService.Variables {
+			if service.Variables == nil {
+				service.Variables = make(map[string]VariableFile)
+			}
+			service.Variables[varKey] = variable
+		}
+
+		for _, env := range parentService.Environment {
 			if service.Environment == nil {
 				service.Environment = Environment{}
 			}
 			service.Environment = append(service.Environment, env)
 		}
 
-		services[serviceKey] = service
+	}
+
+}
+
+func (c *Compose) init() {
+	services := make(map[string]Service)
+	for serviceKey, service := range c.Services {
+		if !service.Abstract {
+			c.mergeParent(&service, service)
+			for _, env := range c.Environment {
+				if service.Environment == nil {
+					service.Environment = Environment{}
+				}
+				service.Environment = append(service.Environment, env)
+			}
+
+			services[serviceKey] = service
+		}
 	}
 
 	c.Services = services

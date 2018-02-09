@@ -3,8 +3,14 @@ environment:
   - GLOBAL=value
 
 services:
+  root:
+    abstract: true
+    commands:
+      clean: [ls]
+      init: [terraform in]
   terraform:
     abstract: true
+    parent: root
     environment:
       - TEST=Value
     variables:
