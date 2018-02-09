@@ -1,11 +1,6 @@
 version: '1'
 environment:
   - GLOBAL=value
-environments:
-  europe:
-    - OS_REGION_NAME=EUR
-  USEast:
-    - OS_REGION_NAME=US-EAST
 
 services:
   terraform:
@@ -35,11 +30,9 @@ services:
     commands:
       ssh: [./script-ssh-connect.sh]
   up:
-    commands:
-      all:
-        - europe global up
-        - USEast global up
-        - bastion up
+    command:
+      - global up
+      - $bastion up
   down:
     commands:
       all: [bastion down]

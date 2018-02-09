@@ -30,6 +30,7 @@ type Service struct {
 	Parent      string
 	Path        string
 	Commands    Commands
+	Command     Command
 	Environment Environment
 	Variables   map[string]VariableFile
 }
@@ -38,26 +39,40 @@ type Environment []string
 
 // Compose ... composed infrastructure
 type Compose struct {
-	Version      string
-	projectDir   string
-	Services     map[string]Service
-	Environments map[string]Environment
-	Environment  Environment
+	Version    string
+	projectDir string
+	Services   map[string]Service
+	//	Environments map[string]Environment
+	Environment Environment
 
 	DryRun bool
 }
 
 type execResult struct {
-	environmentID string
-	serviceID     string
-	commandID     string
-	command       Command
-	execError     error
+	//	environmentID string
+	serviceID string
+	commandID string
+	command   Command
+	execError error
+}
+
+type execResults struct {
+	execResultList []*execResult
+}
+
+func (c *execResults) add(execResult execResult) {
+	c.execResultList = append(c.execResultList, &execResult)
+}
+
+func newExecResults() *execResults {
+	r := &execResults{}
+	r.execResultList = make([]*execResult, 0)
+	return r
 }
 
 // Exec ...
 func (c *Compose) Exec(args []string) error {
-	var execResults []execResult
+	execResults := newExecResults()
 	//serviceCmdAlias := args[0]
 
 	// cmds, present := c.Commands[serviceCmdAlias]
@@ -72,12 +87,12 @@ func (c *Compose) Exec(args []string) error {
 	// 		}
 	// 	}
 	// } else {
-	res := c.execServiceCmds(args)
-	execResults = append(execResults, res)
-	err := res.execError
+	results, err := c.execServiceCmds(args, execResults)
+	//execResults = append(execResults, res)
+	//	err := res.execError
 	//}
 
-	dumpExecResults(execResults)
+	dumpExecResults(results)
 
 	return err
 }
@@ -98,13 +113,19 @@ func (c *Compose) List(args []string) error {
 	for _, srv := range srvKeys {
 		service := c.Services[srv]
 
-		commands := Commands{}
+		if len(service.Command) > 0 {
+			dumpCommandList(w, srv, "", service.Command)
+		} else {
+			commands := Commands{}
 
-		for cmdKey, cmd := range service.Commands {
-			commands[cmdKey] = cmd
+			for cmdKey, cmd := range service.Commands {
+				commands[cmdKey] = cmd
+			}
+
+			dumpCommand(w, srv, commands)
+
 		}
 
-		dumpCommand(w, srv, commands)
 	}
 
 	w.Flush()
@@ -127,10 +148,14 @@ func dumpCommand(w *tabwriter.Writer, serviceName string, commands Commands) {
 	for _, cmd := range keys {
 		subCommands := commands[cmd]
 
-		commandList := ellipsis(40, strings.Join(subCommands, " | "))
-
-		fmt.Fprintf(w, "%s\t%s\t%s\t\n", serviceName, cmd, commandList)
+		dumpCommandList(w, serviceName, cmd, subCommands)
 	}
+}
+
+func dumpCommandList(w *tabwriter.Writer, serviceName string, command string, subCommands []string) {
+	commandList := ellipsis(40, strings.Join(subCommands, " | "))
+
+	fmt.Fprintf(w, "%s\t%s\t%s\t\n", serviceName, command, commandList)
 }
 
 func ellipsis(length int, text string) string {
@@ -141,61 +166,64 @@ func ellipsis(length int, text string) string {
 	return text
 }
 
-func dumpExecResults(execResults []execResult) {
+func dumpExecResults(execResults *execResults) {
 	fmt.Println("Execution summary")
 	fmt.Println()
 	const padding = 4
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
-	fmt.Fprintln(w, "ENVIRONMENT\tSERVICE\tCOMMAND\tSTATUS\t")
-	//	fmt.Fprintln(w, "\t\t\t\t\t\t")
-	for _, res := range execResults {
+	fmt.Fprintln(w, "SERVICE\tCOMMAND\tSTATUS\t")
+	for _, res := range execResults.execResultList {
 		status := "Success"
 		if res.execError != nil {
 			status = "Error"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t\n", res.environmentID,
+		fmt.Fprintf(w, "%s\t%s\t%s\t\n",
 			res.serviceID, res.commandID, status)
 	}
 	w.Flush()
 	fmt.Println()
 }
 
-func (c *Compose) execServiceCmd(args string) execResult {
-	return c.execServiceCmds(strings.Fields(args))
+func (c *Compose) execServiceCmd(args string, execResults *execResults) (*execResults, error) {
+	return c.execServiceCmds(strings.Fields(args), execResults)
 }
 
-func (c *Compose) execServiceCmds(args []string) execResult {
+func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*execResults, error) {
 	result := execResult{}
 	//	fmt.Println("Exec args:" + strings.Join(args, " "))
 
 	var env Environment
 
 	// check if environment is defined
-	envID := args[0]
-	envConf, present := c.Environments[envID]
-	if present {
-		env = envConf
-		args = args[1:]
-		result.environmentID = envID
-	}
+	//envID := args[0]
+	//	envConf, present := c.Environments[envID]
+	//	if present {
+	//	env = envConf
+	//args = args[1:]
+	//result.environmentID = envID
+	//	}
 
 	serviceName := args[0]
 	result.serviceID = serviceName
 	service, present := c.Services[serviceName]
 	if !present {
-		result.execError = errors.New("Invalid service name")
-		return result
+		return nil, errors.New("Invalid service name")
 	}
 
 	servicePath := filepath.Join(c.projectDir, service.Path)
 	err := os.Chdir(servicePath)
 	if err != nil {
-		result.execError = err
-		return result
+		return nil, err
 	}
 
-	command := args[1]
-	commandArgs := args[2:]
+	var command string
+	var commandArgs []string
+	if len(args) > 1 {
+		command = args[1]
+		if len(args) > 2 {
+			commandArgs = args[2:]
+		}
+	}
 
 	// Merge service environment
 	env = appendEnv(service.Environment, env)
@@ -242,6 +270,37 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 		}
 	}
 
+	if len(service.Command) > 0 {
+
+		for _, commands := range service.Command {
+			commandsSplit := strings.Fields(commands)
+
+			cmd := commandsSplit[0]
+			if strings.HasPrefix(cmd, "$") {
+				newArgs := []string{cmd[1:]}
+				args := commandsSplit[1:]
+				newArgs = append(newArgs, args...)
+				execResults, err := c.execServiceCmds(newArgs, execResults)
+				if err != nil {
+					return execResults, err
+				}
+			} else {
+				result.commandID = cmd
+				err = c.executeCommand(cmd, commandsSplit[1:], servicePath, env, service)
+				if err != nil {
+					result.execError = err
+					execResults.add(result)
+					return execResults, err
+				}
+				execResults.add(result)
+			}
+
+		}
+
+		//		results := append(*execResults, result)
+		return execResults, nil
+	}
+
 	// search if a command is defined
 	commandList, present := service.Commands[command]
 	if present {
@@ -251,16 +310,19 @@ func (c *Compose) execServiceCmds(args []string) execResult {
 			err = c.executeCommand(commandsSplit[0], commandsSplit[1:], servicePath, env, service)
 			if err != nil {
 				result.execError = err
-				return result
+				execResults.add(result)
+				return execResults, err
 			}
 		}
-		return result
+		execResults.add(result)
+		return execResults, err
 	}
 
 	// Execute command in service directory
 	result.commandID = "-"
 	result.execError = c.executeCommand(command, commandArgs, servicePath, env, service)
-	return result
+	execResults.add(result)
+	return execResults, err
 }
 
 func (c *Compose) executeCommand(name string, args []string, dir string, env Environment, service Service) error {
