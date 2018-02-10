@@ -398,6 +398,10 @@ func (c *Compose) mergeParent(service *Service, currentService Service) {
 
 		c.mergeParent(service, parentService)
 
+		if parentService.Path != "" {
+			service.Path = parentService.Path
+		}
+
 		for cmdKey, cmd := range parentService.Commands {
 			if service.Commands == nil {
 				service.Commands = make(Commands)
