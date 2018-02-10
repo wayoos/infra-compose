@@ -36,13 +36,13 @@ services:
     commands:
       ssh: [./script-ssh-connect.sh]
       test:
-        - $global down
+        - global down ${task.id}
   up:
     command:
-      - $global up
-      - $bastion up
-      - $bastion ssh
-      - $bastion test
+      - _global up
+      - _bastion up
+      - _bastion ssh
+      - _bastion test
   down:
     commands:
       all: [bastion down]

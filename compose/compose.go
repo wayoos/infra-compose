@@ -172,14 +172,19 @@ func dumpExecResults(execResults *execResults) {
 	const padding = 4
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', 0)
 	fmt.Fprintln(w, "SERVICE\tCOMMAND\tSTATUS\t")
-	for _, res := range execResults.execResultList {
-		status := "Success"
-		if res.execError != nil {
-			status = "Error"
+
+	if execResults != nil {
+		for _, res := range execResults.execResultList {
+			status := "Success"
+			if res.execError != nil {
+				status = "Error"
+			}
+			fmt.Fprintf(w, "%s\t%s\t%s\t\n",
+				res.serviceID, res.commandID, status)
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t\n",
-			res.serviceID, res.commandID, status)
+
 	}
+
 	w.Flush()
 	fmt.Println()
 }
@@ -220,6 +225,7 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 	var commandArgs []string
 	if len(args) > 1 {
 		command = args[1]
+		os.Setenv("arg.0", command)
 		if len(args) > 2 {
 			commandArgs = args[2:]
 		}
@@ -273,13 +279,21 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 	if len(service.Command) > 0 {
 
 		for _, commands := range service.Command {
+
+			commands = os.ExpandEnv(commands)
+
 			commandsSplit := strings.Fields(commands)
 
 			cmd := commandsSplit[0]
-			if strings.HasPrefix(cmd, "$") {
+			if strings.HasPrefix(cmd, "_") {
 				newArgs := []string{cmd[1:]}
 				args := commandsSplit[1:]
 				newArgs = append(newArgs, args...)
+
+				if len(newArgs) > 1 {
+					os.Setenv("arg.0", newArgs[1])
+				}
+
 				execResults, err := c.execServiceCmds(newArgs, execResults)
 				if err != nil {
 					return execResults, err
@@ -308,7 +322,7 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 		for _, commands := range commandList {
 			commandsSplit := strings.Fields(commands)
 			cmd := commandsSplit[0]
-			if strings.HasPrefix(cmd, "$") {
+			if strings.HasPrefix(cmd, "_") {
 				newArgs := []string{cmd[1:]}
 				args := commandsSplit[1:]
 				newArgs = append(newArgs, args...)
