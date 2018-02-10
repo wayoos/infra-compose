@@ -432,7 +432,16 @@ func (c *Compose) mergeParent(service *Service, currentService Service) {
 			if service.Variables == nil {
 				service.Variables = make(map[string]VariableFile)
 			}
-			service.Variables[varKey] = variable
+
+			currentVariable, present := service.Variables[varKey]
+			if present {
+				for _, env := range variable.Environment {
+					currentVariable.Environment = append(currentVariable.Environment, env)
+				}
+				service.Variables[varKey] = currentVariable
+			} else {
+				service.Variables[varKey] = variable
+			}
 		}
 
 		for _, env := range parentService.Environment {
