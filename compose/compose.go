@@ -215,12 +215,6 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 		return nil, errors.New("Invalid service name")
 	}
 
-	servicePath := filepath.Join(c.projectDir, service.Path)
-	err := os.Chdir(servicePath)
-	if err != nil {
-		return nil, err
-	}
-
 	var command string
 	var commandArgs []string
 	if len(args) > 1 {
@@ -228,7 +222,18 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 		os.Setenv("arg.0", command)
 		if len(args) > 2 {
 			commandArgs = args[2:]
+			os.Setenv("arg.1", commandArgs[0])
+			os.Setenv("arg.1.upper", strings.ToUpper(commandArgs[0]))
 		}
+	}
+
+	servicePath := filepath.Join(c.projectDir, service.Path)
+
+	servicePath = os.ExpandEnv(servicePath)
+
+	err := os.Chdir(servicePath)
+	if err != nil {
+		return nil, err
 	}
 
 	// Merge service environment
