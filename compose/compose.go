@@ -265,11 +265,11 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 	if !c.DryRun {
 		// create variables files
 		for _, variableFile := range service.Variables {
-			fmt.Println("Var file  : " + variableFile.File)
+			//			fmt.Println("Var file  : " + variableFile.File)
 			absProjectDir, _ := filepath.Abs(variableFile.File)
 			parentDir := filepath.Dir(absProjectDir)
 
-			fmt.Println("MkDir  : " + parentDir)
+			//			fmt.Println("MkDir  : " + parentDir)
 			os.MkdirAll(parentDir, 0755)
 
 			outputVars := ""
@@ -425,7 +425,10 @@ func (c *Compose) mergeParent(service *Service, currentService Service) {
 			if service.Commands == nil {
 				service.Commands = make(Commands)
 			}
-			service.Commands[cmdKey] = cmd
+			_, present := service.Commands[cmdKey]
+			if !present {
+				service.Commands[cmdKey] = cmd
+			}
 		}
 
 		for varKey, variable := range parentService.Variables {
@@ -438,6 +441,11 @@ func (c *Compose) mergeParent(service *Service, currentService Service) {
 				for _, env := range variable.Environment {
 					currentVariable.Environment = append(currentVariable.Environment, env)
 				}
+
+				if currentVariable.File == "" {
+					currentVariable.File = variable.File
+				}
+
 				service.Variables[varKey] = currentVariable
 			} else {
 				service.Variables[varKey] = variable
