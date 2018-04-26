@@ -236,6 +236,9 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 		return nil, err
 	}
 
+	servicePathEnv := os.ExpandEnv(service.Path)
+	os.Setenv("service.path", servicePathEnv)
+
 	// Merge service environment
 	env = appendEnv(service.Environment, env)
 
