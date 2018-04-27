@@ -215,6 +215,13 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 		return nil, errors.New("Invalid service name")
 	}
 
+	for _, value := range service.Environment {
+		variableSplit := strings.Split(value, "=")
+		if len(variableSplit) == 2 {
+			os.Setenv(variableSplit[0], os.ExpandEnv(variableSplit[1]))
+		}
+	}
+
 	var command string
 	var commandArgs []string
 	if len(args) > 1 {
