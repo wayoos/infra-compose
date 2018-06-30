@@ -42,7 +42,7 @@ function d_release() {
         --repo infra-compose \
         --tag $VERSION \
         --name "${VERSION}" \
-        --description "infra-compose release v${VERSION}" \
+        --description "infra-compose release ${VERSION}" \
 
     github-release upload \
         --user wayoos \
