@@ -27,3 +27,15 @@ so you may need to adjust them for Linux, Windows or other shells.
 3. Download the infra-compose source (and its dependencies) by running `go get
    github.com/wayoos/infra-compose`. This will download the infra-compose source to
    `$GOPATH/src/github.com/wayoos/infra-compose`.
+
+## Release
+
+Release binaries are deployed to Github.
+
+1. Define the version in main.go and commit/push
+
+2. [Create a github token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
+    and set it as the env variable `GITHUB_TOKEN`. `github-release` will automatically pick it up from the
+    environment so that you don't have to pass it as an argument.
+
+3. Execute the command `./build.sh release`
