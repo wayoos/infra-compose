@@ -15,10 +15,13 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// Command ...
 type Command []string
 
+// Commands ...
 type Commands map[string]Command
 
+// VariableFile ...
 type VariableFile struct {
 	File        string
 	Environment Environment
@@ -35,6 +38,7 @@ type Service struct {
 	Variables   map[string]VariableFile
 }
 
+// Environment ...
 type Environment []string
 
 // Compose ... composed infrastructure
