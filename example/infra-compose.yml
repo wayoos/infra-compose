@@ -7,7 +7,7 @@ services:
     abstract: true
     commands:
       clean: [ls]
-      init: [terraform in]
+      init: [terraform init]
   terraform:
     abstract: true
     parent: root
@@ -21,8 +21,7 @@ services:
           - "bucket = \"${branch.first}.tfstate.wayoos.info\""
     commands:
       init:
-        - terraform init $HOME
-        - terraform workspace new ${branch.last}
+        - terraform init
       up: [terraform apply]
       down: [terraform destroy -force]
   global:
@@ -35,6 +34,7 @@ services:
       backend-variables:
         file: .terraform/backend-variables.tf
         environment:
+          - "bucket = \"${branch.first}.bobo.tfstate.wayoos.info\""
           - "test = \"value\""
     environment:
       - OS_REGION_NAME2=EURCUSTOM

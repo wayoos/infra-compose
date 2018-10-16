@@ -453,7 +453,18 @@ func (c *Compose) mergeParent(service *Service, currentService Service) {
 			currentVariable, present := service.Variables[varKey]
 			if present {
 				for _, env := range variable.Environment {
-					currentVariable.Environment = append(currentVariable.Environment, env)
+					// test if not already defined
+					key := strings.Fields(env)
+					alreadyDefined := false
+					for _, currentEnv := range currentVariable.Environment {
+						currentKey := strings.Fields(currentEnv)
+						if key[0] == currentKey[0] {
+							alreadyDefined = true
+						}
+					}
+					if !alreadyDefined {
+						currentVariable.Environment = append(currentVariable.Environment, env)
+					}
 				}
 
 				if currentVariable.File == "" {

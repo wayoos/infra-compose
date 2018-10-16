@@ -18,7 +18,7 @@ import "github.com/wayoos/infra-compose/cmd"
 
 var (
 	// VERSION ... used by build script
-	VERSION = "0.1"
+	VERSION = "0.1.1"
 )
 
 func main() {
