@@ -21,6 +21,7 @@ changelog:
     - '^test:'
     - '^build:'
 archive:
+  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
   files:
   - none*
 brew:
@@ -31,6 +32,7 @@ brew:
   commit_author:
     name: wayoosci
     email: staff@wayoos.com
+  homepage: https://github.com/wayoos/infra-compose
   description: "Define and run multi-infrastructure tools."
   test: |
-    system "#{bin}/{{ .ProjectName }} version"
+    system "#{bin}/infra-compose version"
