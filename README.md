@@ -1,38 +1,46 @@
 # infra-compose
 
-## Setting up Go to work on infra-compose
+## Installing
+
+There are different ways to get going install infra-compose:
+
+Using homebrew
+
+```
+brew install wayoos/tap/infra-compose
+```
+
+Manually
+
+Download your preferred flavor from the [releases page](https://github.com/wayoos/infra-compose/releases/latest) and install manually.
+
+## Setting up Go to develop on infra-compose
 
 If you have never worked with Go before, you will have to complete the following
 steps in order to be able to compile and test infra-compose. These instructions target MacOS environments
 so you may need to adjust them for Linux, Windows or other shells.
 
-1. install [go](https://golang.org) and [dep](https://golang.github.io/dep/), with [Homebrew](https://brew.sh).
+1. install [go](https://golang.org), with [Homebrew](https://brew.sh).
 
     ```
     brew install go
-    brew install dep
     ```
 
-2. Set and export the `GOPATH` environment variable and update your `PATH`. For
-   example, you can add to your `.bash_profile`.
+2. Download the infra-compose source by running `git clone https://github.com/wayoos/infra-compose.git`.
+   This will download the infra-compose source.
 
-    ```
-    export GOPATH=$HOME/<path to your go workspace>
-    export GOROOT=/usr/local/opt/go/libexec
-    export PATH="$PATH:${GOPATH}/bin:${GOROOT}/bin"
-    ```
-    
-    Find GOROOT with `brew --prefix go` and add 'libexec'
-
-3. Download the infra-compose source (and its dependencies) by running `go get
-   github.com/wayoos/infra-compose`. This will download the infra-compose source to
-   `$GOPATH/src/github.com/wayoos/infra-compose`.
+3. Launch the application with `go run main.go`
 
 ## Release
 
 Release binaries are deployed to Github.
 
-1. Define the version in main.go and commit/push
+1. GoReleaser will use the latest Git tag of your repository. Create a tag and push it to GitHub:
+
+```
+$ git tag -a v0.1.0 -m "First release"
+$ git push origin v0.1.0
+```
 
 2. [Create a github token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
     and set it as the env variable `GITHUB_TOKEN`. `github-release` will automatically pick it up from the
