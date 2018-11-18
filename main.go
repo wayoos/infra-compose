@@ -14,13 +14,16 @@
 
 package main
 
-import "github.com/wayoos/infra-compose/cmd"
+import (
+	"github.com/wayoos/infra-compose/cmd"
+)
 
 var (
-	// VERSION ... used by build script
-	VERSION = "0.1.1"
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 func main() {
-	cmd.Execute(VERSION)
+	cmd.Execute(version, commit, date)
 }

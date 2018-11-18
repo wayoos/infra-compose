@@ -23,10 +23,10 @@ import (
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Show the Infra-Compose version information",
+	Short: "Show the infra-compose version information",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(RootCmd.Use + " v" + VERSION)
+		fmt.Println(RootCmd.Use + " " + version + " commit " + commit + " built at " + buildAt)
 	},
 }
 

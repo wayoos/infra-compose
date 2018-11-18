@@ -42,13 +42,17 @@ var RootCmd = &cobra.Command{
 
 var (
 	// VERSION is set during build
-	VERSION string
+	version string
+	commit  string
+	buildAt string
 )
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(version string) {
-	VERSION = version
+func Execute(versionParam string, commitParam string, date string) {
+	version = versionParam
+	commit = commitParam
+	buildAt = date
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)

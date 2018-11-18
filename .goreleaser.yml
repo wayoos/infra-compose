@@ -1,0 +1,36 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    # you may remove this if you don't use vgo
+    - go mod download
+builds:
+- env:
+  - CGO_ENABLED=0
+  goarch:
+  - amd64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - '^build:'
+archive:
+  files:
+  - none*
+brew:
+  folder: Formula
+  github:
+    owner: wayoos
+    name: homebrew-tap
+  commit_author:
+    name: wayoosci
+    email: staff@wayoos.com
+  description: "Define and run multi-infrastructure tools."
+  test: |
+    system "#{bin}/{{ .ProjectName }} version"
