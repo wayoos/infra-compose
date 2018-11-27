@@ -1,6 +1,10 @@
 package compose
 
-import "strings"
+import (
+	"os"
+	"strconv"
+	"strings"
+)
 
 func appendEnv(rootEnv Environment, env Environment) Environment {
 	for _, e := range env {
@@ -9,6 +13,13 @@ func appendEnv(rootEnv Environment, env Environment) Environment {
 		}
 	}
 	return rootEnv
+}
+
+func argsToEnv(args []string) {
+	for idx, arg := range args {
+		os.Setenv("arg."+strconv.Itoa(idx), arg)
+		os.Setenv("arg."+strconv.Itoa(idx)+".upper", strings.ToUpper(arg))
+	}
 }
 
 func isPresent(env Environment, envVar string) bool {

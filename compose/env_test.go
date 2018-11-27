@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"os"
 	"sort"
 	"testing"
 )
@@ -16,6 +17,24 @@ func TestAppendEnv(t *testing.T) {
 
 	if !isEqual(expected, mergedEnv) {
 		t.Error("Expected, got ", mergedEnv)
+	}
+}
+
+func TestArgsToEnv(t *testing.T) {
+	argsToEnv([]string{"a", "b", "c", "d"})
+
+	t.Run("test a", testSumFunc("test ${arg.0}", "test a"))
+	t.Run("test ab", testSumFunc("test ${arg.0}${arg.1}", "test ab"))
+	t.Run("test abcd", testSumFunc("test ${arg.0}${arg.1}${arg.2}${arg.3}", "test abcd"))
+	t.Run("test abcd", testSumFunc("test ${arg.0}${arg.1}${arg.2}${arg.3}${arg.4}", "test abcd"))
+}
+
+func testSumFunc(testValue string, expected string) func(*testing.T) {
+	return func(t *testing.T) {
+		result := os.ExpandEnv(testValue)
+		if result != expected {
+			t.Errorf("Expected %s got %s", expected, result)
+		}
 	}
 }
 
