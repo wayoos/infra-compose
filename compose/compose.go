@@ -227,9 +227,15 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 	}
 
 	argsToEnv(args)
-	commandArgs := args[2:]
 
 	var command string
+	var commandArgs []string
+	if len(args) > 1 {
+		command = args[1]
+		if len(args) > 2 {
+			commandArgs = args[2:]
+		}
+	}
 
 	servicePath := filepath.Join(c.projectDir, service.Path)
 

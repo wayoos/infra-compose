@@ -41,7 +41,7 @@ services:
     commands:
       ssh: [./script-ssh-connect.sh]
       test:
-        - global down ${arg.0} ${arg.1} ${arg.2}
+        - global down ${arg.0} ${arg.1} ${arg.2} ${arg.3} ${arg.4.upper} ${arg.5}
   up:
     command:
       - _global up
