@@ -47,3 +47,7 @@ $ git push origin v0.1.0
     environment so that you don't have to pass it as an argument.
 
 3. Execute the command `./build.sh release`
+
+## Variable
+
+https://github.com/gliderlabs/sigil

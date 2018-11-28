@@ -226,7 +226,7 @@ func (c *Compose) execServiceCmds(args []string, execResults *execResults) (*exe
 		}
 	}
 
-	argsToEnv(args)
+	argsToEnv(args[1:])
 
 	var command string
 	var commandArgs []string
@@ -513,11 +513,6 @@ func (c *Compose) loadCompose(composeFile string) error {
 	}
 
 	composeStr := string(source)
-
-	//	os.Setenv("branch.first", "prod")
-	//	os.Setenv("branch.last", "prod")
-
-	//	composeParsed := os.ExpandEnv(composeStr)
 
 	err = yaml.Unmarshal([]byte(composeStr), &c)
 	if err != nil {

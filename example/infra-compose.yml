@@ -44,10 +44,16 @@ services:
         - global down ${arg.0} ${arg.1} ${arg.2} ${arg.3} ${arg.4.upper} ${arg.5}
   up:
     command:
-      - _global up
-      - _bastion up
+      - _bastion ${arg.0}
+      - _global ${arg.0}
+      - _bastion ${arg.0}
       - _bastion ssh
       - _bastion test
   down:
     commands:
       all: [bastion down]
+  all:
+    command:
+      - _bastion ${arg.0}
+      - _global ${arg.0}
+      - _bastion ${arg.0}
