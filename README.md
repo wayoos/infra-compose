@@ -51,3 +51,4 @@ $ git push origin v0.1.0
 ## Variable
 
 https://github.com/gliderlabs/sigil
+https://github.com/Masterminds/sprig
